@@ -492,6 +492,7 @@
   }
 
   .print-session-container{ display:none; }
+
   @media print{
     .modal-overlay{ display:none !important; }
     body.printing-history header,
@@ -1149,7 +1150,8 @@ function loadParsedState(parsed){
   rods = data.map(d=>({
     id: d.id, name: d.name||'Lansetă', distance: d.distance||'', bait: d.bait||'',
     catchLog: Array.isArray(d.catchLog) ? d.catchLog : [], missLog: Array.isArray(d.missLog) ? d.missLog : [], totalSeconds: d.totalSeconds||300, remaining: d.remaining??d.totalSeconds??300,
-    running:false, endTime:null, ringing:false, alarmIntervalId:null, selected:false
+    running: !!(d.running && d.endTime), endTime: (d.running && d.endTime) ? d.endTime : null,
+    ringing:false, alarmIntervalId:null, selected:false
   }));
   nextId = Math.max(1, ...rods.map(r=>r.id+1), 1);
   if(session){
@@ -1157,6 +1159,11 @@ function loadParsedState(parsed){
     document.getElementById('lakeName').value = sessionInfo.lake;
     document.getElementById('standNumber').value = sessionInfo.stand;
   }
+  // recompute remaining immediately from the real clock for any timer that
+  // was running, so it either shows the correct countdown or fires the
+  // alarm right away if it already finished while the app was closed
+  tickAllTimers();
+  updateWakeLock();
 }
 
 function applyImportedJson(raw){
@@ -1322,7 +1329,7 @@ function saveToLocalStorage(){
       session: sessionInfo,
       rods: rods.map(r=>({
         id:r.id, name:r.name, distance:r.distance, bait:r.bait, catchLog:r.catchLog, missLog:r.missLog,
-        totalSeconds:r.totalSeconds, remaining:r.running?r.remaining:r.totalSeconds
+        totalSeconds:r.totalSeconds, remaining:r.remaining, running:r.running, endTime:r.endTime
       }))
     };
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
