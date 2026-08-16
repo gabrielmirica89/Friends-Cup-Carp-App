@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jurnal-pescuit-v1';
+const CACHE_NAME = 'jurnal-pescuit-v2';
 const FILES_TO_CACHE = [
   './index.html',
   './manifest.json',
@@ -22,8 +22,18 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Network-first: always try to fetch the latest version when online, and
+// only fall back to the cached copy when offline. This way, updating
+// index.html on GitHub shows up immediately next time the phone has a
+// connection, instead of being stuck on whatever was cached at install time.
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
