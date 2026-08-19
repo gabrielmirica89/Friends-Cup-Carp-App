@@ -1,0 +1,1834 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jurnal de Pescuit</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0b2436">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --navy:#0b2436;
+    --navy-deep:#081925;
+    --teal:#1b5e63;
+    --teal-light:#2c7d84;
+    --sand:#c9a15a;
+    --sand-light:#e4c98a;
+    --cream:#f3efe6;
+    --red:#c0392b;
+    --green:#4f9d69;
+    --line:rgba(243,239,230,0.12);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse at top left, rgba(44,125,132,0.25), transparent 55%),
+      radial-gradient(ellipse at bottom right, rgba(201,161,90,0.10), transparent 50%),
+      var(--navy-deep);
+    color:var(--cream);
+    font-family: Georgia, 'Times New Roman', serif;
+    min-height:100vh;
+  }
+  header{
+    padding:36px 24px 22px;
+    text-align:center;
+    border-bottom:1px solid var(--line);
+  }
+  header h1{
+    margin:0;
+    font-size:2.4rem;
+    letter-spacing:0.5px;
+    font-weight:700;
+    color:var(--sand-light);
+  }
+  header p{
+    margin:8px 0 0;
+    font-family: 'Trebuchet MS', system-ui, sans-serif;
+    color:rgba(243,239,230,0.65);
+    font-size:0.95rem;
+  }
+  .live-clock{
+    margin-top:10px;
+    display:inline-block;
+    font-family:'Trebuchet MS', system-ui, sans-serif;
+    font-size:0.85rem;
+    letter-spacing:0.4px;
+    color:var(--sand-light);
+    background:rgba(201,161,90,0.08);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:6px 16px;
+  }
+  .session-info{
+    max-width:1100px;
+    margin:20px auto 0;
+    padding:0 24px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:16px;
+    font-family:'Trebuchet MS', system-ui, sans-serif;
+  }
+  .session-field{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:rgba(201,161,90,0.06);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:8px 12px;
+    flex:1;
+    min-width:200px;
+  }
+  .session-field label{
+    color:var(--sand-light);
+    font-size:0.8rem;
+    font-weight:700;
+    flex:none;
+  }
+  .session-field input{
+    flex:1;
+    background:transparent;
+    border:none;
+    border-bottom:1px solid var(--line);
+    color:var(--cream);
+    font-size:0.9rem;
+    font-family:'Trebuchet MS', system-ui, sans-serif;
+    padding:3px 2px;
+    min-width:0;
+  }
+  .session-field input:focus{ outline:none; border-bottom:1px solid var(--sand); }
+
+  .global-timer{
+    max-width:1100px;
+    margin:14px auto 0;
+    padding:0 24px;
+    font-family:'Trebuchet MS', system-ui, sans-serif;
+  }
+  .global-timer-title{
+    color:var(--sand-light);
+    font-size:0.9rem;
+    font-weight:700;
+    margin-bottom:10px;
+  }
+  .global-timer-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .global-timer-note{
+    margin:8px 0 0;
+    font-size:0.75rem;
+    color:rgba(243,239,230,0.45);
+  }
+
+  .toolbar{
+    max-width:1100px;
+    margin:22px auto 0;
+    padding:0 24px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    align-items:center;
+    justify-content:space-between;
+    font-family:'Trebuchet MS', system-ui, sans-serif;
+  }
+  .stats{
+    display:flex;
+    gap:18px;
+    font-size:0.9rem;
+    color:rgba(243,239,230,0.75);
+  }
+  .stats b{ color:var(--sand-light); font-size:1.05rem; }
+  .actions{ display:flex; gap:10px; flex-wrap:wrap; }
+  button{
+    font-family:'Trebuchet MS', system-ui, sans-serif;
+    cursor:pointer;
+    border:none;
+    border-radius:6px;
+    padding:9px 16px;
+    font-size:0.85rem;
+    font-weight:600;
+    letter-spacing:0.3px;
+    transition:transform .12s ease, filter .12s ease;
+  }
+  button:active{ transform:scale(0.96); }
+  .btn-primary{ background:var(--sand); color:var(--navy-deep); }
+  .btn-primary:hover{ filter:brightness(1.1); }
+  .btn-ghost{ background:transparent; color:var(--cream); border:1px solid var(--line); }
+  .btn-ghost:hover{ background:rgba(243,239,230,0.06); }
+  input[type=file]{ display:none; }
+
+  #board{
+    max-width:1100px;
+    margin:26px auto 60px;
+    padding:0 24px;
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(300px,1fr));
+    gap:20px;
+  }
+  .empty{
+    grid-column:1/-1;
+    text-align:center;
+    padding:60px 20px;
+    color:rgba(243,239,230,0.5);
+    font-family:'Trebuchet MS', system-ui, sans-serif;
+    border:1px dashed var(--line);
+    border-radius:12px;
+  }
+
+  .card{
+    background:linear-gradient(160deg, rgba(27,94,99,0.35), rgba(11,36,54,0.6));
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px;
+    position:relative;
+    box-shadow:0 6px 18px rgba(0,0,0,0.25);
+  }
+  .card.done{ border-color:var(--red); box-shadow:0 0 0 1px var(--red), 0 6px 18px rgba(192,57,43,0.25); }
+  .card.ringing{ animation:pulseCard 1s ease-in-out infinite; }
+  @keyframes pulseCard{
+    0%,100%{ box-shadow:0 0 0 1px var(--red), 0 6px 18px rgba(192,57,43,0.25); }
+    50%{ box-shadow:0 0 0 3px var(--red), 0 6px 24px rgba(192,57,43,0.5); }
+  }
+  .alarm-stop-btn{
+    width:100%;
+    background:var(--red);
+    color:var(--cream);
+    font-family:'Trebuchet MS', system-ui, sans-serif;
+    font-weight:700;
+    font-size:0.85rem;
+    padding:10px;
+    border-radius:8px;
+    margin-bottom:12px;
+    animation:pulseBtn 1s ease-in-out infinite;
+  }
+  @keyframes pulseBtn{ 0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.25); } }
+  .card-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:8px;
+    margin-bottom:12px;
+  }
+  .card.selected{ border-color:var(--sand); box-shadow:0 0 0 1px var(--sand), 0 6px 18px rgba(0,0,0,0.25); }
+  .rod-check{
+    flex:none;
+    width:18px; height:18px;
+    margin-top:6px;
+    accent-color:var(--sand);
+    cursor:pointer;
+  }
+  .rod-name{
+    background:transparent;
+    border:none;
+    color:var(--sand-light);
+    font-family:Georgia, serif;
+    font-size:1.25rem;
+    font-weight:700;
+    width:100%;
+    border-bottom:1px solid transparent;
+    padding:2px 0;
+  }
+  .rod-name:focus{ outline:none; border-bottom:1px solid var(--sand); }
+  .del-btn{
+    background:none;
+    border:none;
+    color:rgba(243,239,230,0.4);
+    font-size:1.1rem;
+    line-height:1;
+    padding:4px 6px;
+    border-radius:6px;
+  }
+  .del-btn:hover{ color:var(--red); background:rgba(192,57,43,0.12); }
+
+  .timer-wrap{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    margin-bottom:14px;
+  }
+  .ring-box{ position:relative; width:96px; height:96px; flex:none; }
+  .ring-box svg{ transform:rotate(-90deg); }
+  .ring-bg{ fill:none; stroke:rgba(243,239,230,0.1); stroke-width:8; }
+  .ring-fg{ fill:none; stroke:var(--sand); stroke-width:8; stroke-linecap:round; transition:stroke-dashoffset .3s linear, stroke .3s; }
+  .card.done .ring-fg{ stroke:var(--red); }
+  .ring-time{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Trebuchet MS', system-ui, sans-serif;
+    font-weight:700; font-size:0.95rem; color:var(--cream);
+  }
+  .timer-controls{ flex:1; font-family:'Trebuchet MS', system-ui, sans-serif; }
+  .time-inputs{ display:flex; gap:6px; margin-bottom:8px; }
+  .time-inputs input{
+    width:44px; text-align:center;
+    background:rgba(243,239,230,0.06);
+    border:1px solid var(--line);
+    color:var(--cream);
+    border-radius:5px;
+    padding:5px 2px;
+    font-size:0.85rem;
+    font-family:'Trebuchet MS', system-ui, sans-serif;
+  }
+  .time-inputs span{ align-self:center; font-size:0.75rem; color:rgba(243,239,230,0.5); }
+  .timer-btns{ display:flex; gap:6px; }
+  .timer-btns button{ padding:6px 10px; font-size:0.75rem; }
+  .btn-start{ background:var(--teal-light); color:var(--cream); }
+  .btn-start:hover{ filter:brightness(1.15); }
+  .btn-reset{ background:transparent; color:rgba(243,239,230,0.6); border:1px solid var(--line); }
+
+  .field-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:9px 0;
+    border-top:1px solid var(--line);
+    font-family:'Trebuchet MS', system-ui, sans-serif;
+    font-size:0.85rem;
+  }
+  .field-row label{ color:rgba(243,239,230,0.6); flex:none; }
+  .field-row input[type=text], .field-row input[type=number]{
+    background:rgba(243,239,230,0.06);
+    border:1px solid var(--line);
+    color:var(--cream);
+    border-radius:6px;
+    padding:6px 8px;
+    font-size:0.85rem;
+    font-family:'Trebuchet MS', system-ui, sans-serif;
+    text-align:right;
+    width:110px;
+  }
+  .field-row input[type=text]{ text-align:left; width:140px; }
+  .counter-controls{ display:flex; align-items:center; gap:8px; }
+  .counter-controls button{
+    height:26px; padding:0 8px;
+    background:rgba(243,239,230,0.08);
+    color:var(--cream);
+    font-size:0.8rem;
+    line-height:1;
+    border-radius:6px;
+  }
+  .counter-controls button:first-child{ width:26px; padding:0; font-size:1rem; }
+  .counter-controls button:hover{ background:rgba(243,239,230,0.16); }
+  .counter-val{ min-width:20px; text-align:center; font-weight:700; color:var(--sand-light); }
+
+  .catch-log{
+    margin-top:6px;
+    border-top:1px solid var(--line);
+    padding-top:8px;
+    max-height:150px;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    font-family:'Trebuchet MS', system-ui, sans-serif;
+  }
+  .catch-log-empty{
+    font-size:0.78rem;
+    color:rgba(243,239,230,0.4);
+    text-align:center;
+    padding:8px 0;
+  }
+  .catch-entry{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    background:rgba(243,239,230,0.05);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:7px 10px;
+  }
+  .catch-entry-main{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .catch-time{ font-size:0.72rem; color:var(--sand-light); font-weight:700; }
+  .catch-details{ font-size:0.78rem; color:rgba(243,239,230,0.75); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .catch-del{
+    background:none; border:none; flex:none;
+    color:rgba(243,239,230,0.35);
+    font-size:0.9rem; padding:2px 6px; border-radius:6px;
+  }
+  .catch-del:hover{ color:var(--red); background:rgba(192,57,43,0.12); }
+  .miss-entry .catch-time{ color:#d98c4a; }
+  .miss-log{ margin-top:10px; }
+
+  footer{
+    text-align:center;
+    padding:20px;
+    font-family:'Trebuchet MS', system-ui, sans-serif;
+    font-size:0.75rem;
+    color:rgba(243,239,230,0.35);
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; animation:none !important; }
+  }
+
+  .modal-overlay{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(0,0,0,0.6);
+    align-items:center; justify-content:center;
+    z-index:50;
+    padding:20px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal-box{
+    background:var(--navy);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:20px;
+    max-width:480px;
+    width:100%;
+    max-height:80vh;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    font-family:'Trebuchet MS', system-ui, sans-serif;
+  }
+  .modal-box h3{ margin:0; color:var(--sand-light); font-family:Georgia,serif; }
+  .modal-box p{ margin:0; font-size:0.85rem; color:rgba(243,239,230,0.7); line-height:1.4; }
+  .modal-box-lg{ max-width:640px; }
+  .join-row{ display:flex; gap:8px; }
+  .join-row input{
+    flex:1;
+    background:rgba(243,239,230,0.06);
+    border:1px solid var(--line);
+    color:var(--cream);
+    border-radius:8px;
+    padding:9px 10px;
+    font-size:0.9rem;
+    letter-spacing:1px;
+    text-transform:uppercase;
+  }
+  .join-row input:focus{ outline:none; border-color:var(--sand); }
+  .shared-link-box{ display:flex; flex-direction:column; gap:8px; }
+  .shared-link-box textarea{
+    width:100%;
+    min-height:50px;
+    background:rgba(243,239,230,0.06);
+    border:1px solid var(--line);
+    border-radius:8px;
+    color:var(--cream);
+    font-family:monospace;
+    font-size:0.75rem;
+    padding:8px;
+    resize:vertical;
+  }
+  .modal-note{ font-size:0.75rem; color:var(--sand-light); margin:0; }
+  .participants-list{ display:flex; flex-direction:column; gap:6px; max-height:150px; overflow-y:auto; }
+  .participant-row{
+    display:flex; align-items:center; gap:8px;
+    background:rgba(243,239,230,0.05);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:6px 10px;
+    font-size:0.82rem;
+  }
+  .participant-dot{ width:8px; height:8px; border-radius:50%; flex:none; }
+  .participant-dot.online{ background:var(--green); }
+  .participant-dot.offline{ background:rgba(243,239,230,0.3); }
+  .participant-name{ color:var(--cream); }
+  .participant-you{ color:rgba(243,239,230,0.45); font-size:0.72rem; }
+  .history-list{
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .history-empty{
+    text-align:center;
+    padding:24px 10px;
+    color:rgba(243,239,230,0.4);
+    font-size:0.85rem;
+  }
+  .history-session{
+    background:rgba(243,239,230,0.05);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 14px;
+  }
+  .history-session-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:8px;
+    cursor:pointer;
+  }
+  .history-session-title{ color:var(--sand-light); font-weight:700; font-size:0.9rem; }
+  .history-session-sub{ font-size:0.75rem; color:rgba(243,239,230,0.55); margin-top:2px; }
+  .history-session-stats{ font-size:0.78rem; color:rgba(243,239,230,0.75); text-align:right; flex:none; }
+  .history-del{
+    background:none; border:none; color:rgba(243,239,230,0.35);
+    font-size:0.85rem; padding:2px 6px; border-radius:6px; margin-left:6px;
+  }
+  .history-del:hover{ color:var(--red); background:rgba(192,57,43,0.12); }
+  .history-pdf{
+    background:none; border:1px solid var(--line); color:rgba(243,239,230,0.6);
+    font-size:0.72rem; padding:3px 8px; border-radius:6px;
+  }
+  .history-pdf:hover{ color:var(--sand-light); border-color:var(--sand); }
+  .history-detail{
+    display:none;
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px solid var(--line);
+    flex-direction:column;
+    gap:8px;
+  }
+  .history-detail.open{ display:flex; }
+  .history-rod{ font-size:0.8rem; }
+  .history-rod-name{ color:var(--sand-light); font-weight:700; }
+  .history-rod-meta{ color:rgba(243,239,230,0.6); }
+  .modal-box textarea{
+    width:100%;
+    flex:1;
+    min-height:160px;
+    background:rgba(243,239,230,0.06);
+    border:1px solid var(--line);
+    border-radius:8px;
+    color:var(--cream);
+    font-family:monospace;
+    font-size:0.75rem;
+    padding:10px;
+    resize:vertical;
+  }
+  .modal-btns{ display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+  .modal-note{ font-size:0.75rem; color:var(--sand-light); }
+  @media print{
+    body{ background:#fff !important; color:#111 !important; }
+    header{ border-color:#ccc; }
+    header h1{ color:#111; }
+    header p, .live-clock{ color:#444 !important; background:none !important; border:none !important; }
+    .toolbar{ display:none !important; }
+    .session-info{ margin-top:10px; }
+    .session-field{ background:none; border:1px solid #999; }
+    .session-field label, .session-field input{ color:#111 !important; }
+    #board{ grid-template-columns:1fr 1fr; gap:14px; }
+    .card{
+      background:#fff !important;
+      border:1px solid #999 !important;
+      box-shadow:none !important;
+      break-inside:avoid;
+      animation:none !important;
+    }
+    .card.ringing, .card.done{ box-shadow:none !important; }
+    .rod-name{ color:#111 !important; }
+    .del-btn, .alarm-stop-btn, .timer-wrap, .counter-controls button, .catch-del, .rod-check{ display:none !important; }
+    .global-timer{ display:none !important; }
+    .field-row{ border-color:#ddd; color:#111; }
+    .field-row label{ color:#555 !important; }
+    .field-row input{
+      background:none !important; border:none !important; color:#111 !important;
+    }
+    .counter-val{ color:#111 !important; }
+    .catch-log{ max-height:none; overflow:visible; border-color:#ddd; }
+    .catch-entry{ background:none !important; border:1px solid #ddd !important; }
+    .catch-time{ color:#111 !important; }
+    .catch-details{ color:#333 !important; }
+    footer{ display:none !important; }
+  }
+
+  .print-session-container{ display:none; }
+
+  @media print{
+    .modal-overlay{ display:none !important; }
+    body.printing-history header,
+    body.printing-history .session-info,
+    body.printing-history #board{ display:none !important; }
+    body.printing-history .print-session-container{
+      display:block !important;
+      color:#111;
+      font-family:'Trebuchet MS', system-ui, sans-serif;
+    }
+    .print-session-container h1{ font-family:Georgia,serif; font-size:1.4rem; margin:0 0 4px; }
+    .print-session-container .ps-date{ color:#555; font-size:0.85rem; margin:0 0 2px; }
+    .print-session-container .ps-summary{ color:#333; font-size:0.85rem; margin:0 0 16px; font-weight:700; }
+    .print-session-container .ps-rod{ break-inside:avoid; margin-bottom:16px; border-top:1px solid #ccc; padding-top:10px; }
+    .print-session-container .ps-rod h3{ margin:0 0 4px; font-family:Georgia,serif; font-size:1.05rem; }
+    .print-session-container .ps-rod-meta{ font-size:0.8rem; color:#444; margin-bottom:8px; }
+    .print-session-container .ps-section-title{ font-size:0.78rem; font-weight:700; color:#555; margin:8px 0 4px; text-transform:uppercase; letter-spacing:0.4px; }
+    .print-session-container .ps-entry{ font-size:0.82rem; padding:3px 0; border-bottom:1px dotted #ddd; }
+    .print-session-container .ps-entry-empty{ font-size:0.8rem; color:#999; padding:3px 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-session-container" id="printSessionContent"></div>
+
+<header>
+  <h1>🎣 Jurnal de Pescuit</h1>
+  <p>Cronometru, distanță și capturi pentru fiecare lansetă</p>
+  <div id="liveClock" class="live-clock"></div>
+</header>
+
+<div class="session-info">
+  <div class="session-field">
+    <label for="lakeName">Lac</label>
+    <input type="text" id="lakeName" placeholder="ex: Lacul Snagov" oninput="updateSessionInfo()">
+  </div>
+  <div class="session-field">
+    <label for="standNumber">Nr. stand</label>
+    <input type="text" id="standNumber" placeholder="ex: 12" oninput="updateSessionInfo()">
+  </div>
+</div>
+
+<div class="global-timer">
+  <div class="global-timer-title">⏱️ Cronometru standard — setează toate lansetele deodată</div>
+  <div class="global-timer-row">
+    <div class="time-inputs">
+      <input type="number" id="globalH" min="0" max="23" value="0"><span>h</span>
+      <input type="number" id="globalM" min="0" max="59" value="5"><span>m</span>
+      <input type="number" id="globalS" min="0" max="59" value="0"><span>s</span>
+    </div>
+    <button class="btn-primary" onclick="applyGlobalTimer()">Aplică la toate lansetele</button>
+  </div>
+  <p class="global-timer-note">Cronometrele individuale rămân disponibile pe fiecare lansetă și pot fi schimbate separat oricând.</p>
+</div>
+
+<div class="global-timer">
+  <div class="global-timer-title">⏳ Durata partidei — la expirare oprește toate cronometrele lansetelor</div>
+  <div class="global-timer-row">
+    <div class="time-inputs">
+      <input type="number" id="sessionH" min="0" max="23" value="4"><span>h</span>
+      <input type="number" id="sessionM" min="0" max="59" value="0"><span>m</span>
+      <input type="number" id="sessionS" min="0" max="59" value="0"><span>s</span>
+    </div>
+    <button class="btn-start" id="sessionTimerBtn" onclick="toggleSessionTimer()">▶ Start</button>
+    <button class="btn-reset" onclick="resetSessionTimerUI()">↺ Resetare</button>
+  </div>
+  <p class="global-timer-note" id="sessionTimerDisplay">Nesetată</p>
+</div>
+
+<div class="toolbar">
+  <div class="stats">
+    <div>Lansete: <b id="statRods">0</b></div>
+    <div>Total capturi: <b id="statCatches">0</b></div>
+    <div>Total ratări: <b id="statMisses">0</b></div>
+  </div>
+  <div class="actions">
+    <button class="btn-primary" onclick="addRod()">+ Adaugă lansetă</button>
+    <button class="btn-ghost" onclick="switchSelectedRods()">🔀 Schimbă date (selectează 2)</button>
+    <button class="btn-primary" onclick="startPartida()">▶️ Start Partida</button>
+    <button class="btn-primary" onclick="finalizePartida()">🏁 Finalizare Partida</button>
+    <button class="btn-ghost" onclick="openHistoryModal()">📜 Istoric partide</button>
+    <button class="btn-ghost" onclick="openSharedModal()">🔗 Partidă comună</button>
+    <button class="btn-ghost" onclick="exportData()">Salvează în fișier</button>
+    <button class="btn-ghost" onclick="openModal('importModal')">Încarcă din fișier</button>
+    <button class="btn-ghost" id="muteBtn" onclick="toggleMute()">🔊 Sunet</button>
+    <button class="btn-ghost" onclick="saveAsPDF()">🖨️ Salvează ca PDF</button>
+    <button class="btn-ghost" onclick="openModal('pdfHelpModal')" title="Nu se deschide fereastra de printare?">❓ PDF nu merge?</button>
+    <input type="file" id="importFile" accept="application/json" onchange="importData(event)" style="display:none">
+  </div>
+</div>
+
+<div id="board"></div>
+
+<footer>Aplicație offline — datele se pierd la reîncărcarea paginii, folosește „Salvează în fișier” pentru a le păstra.</footer>
+
+<div class="modal-overlay" id="exportModal">
+  <div class="modal-box">
+    <h3>Datele tale</h3>
+    <p>Descărcarea automată nu a mers, așa e uneori pe mobil sau în previzualizare. Apasă „Copiază”, apoi lipește textul într-o notiță sau un fișier text (.json) salvat pe telefon.</p>
+    <textarea id="exportText" readonly onclick="this.select()"></textarea>
+    <div class="modal-note" id="copyNote"></div>
+    <div class="modal-btns">
+      <button class="btn-ghost" onclick="closeModal('exportModal')">Închide</button>
+      <button class="btn-primary" onclick="copyExportText()">Copiază</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="importModal">
+  <div class="modal-box">
+    <h3>Încarcă date</h3>
+    <p>Lipește aici textul JSON salvat anterior, apoi apasă „Încarcă”.</p>
+    <textarea id="importText" placeholder="lipește JSON aici..."></textarea>
+    <div class="modal-btns">
+      <button class="btn-ghost" onclick="closeModal('importModal')">Anulează</button>
+      <button class="btn-primary" onclick="importFromText()">Încarcă</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pdfHelpModal">
+  <div class="modal-box">
+    <h3>Fereastra de printare nu s-a deschis</h3>
+    <p>Asta se întâmplă de obicei când pagina e deschisă într-o previzualizare (ca aici, în chat), nu direct în browser. Încearcă:</p>
+    <p>1. Salvează fișierul .html pe telefon/calculator și deschide-l direct în Chrome/Safari (nu în previzualizarea din chat).<br>
+    2. Din browser, folosește meniul (⋮ sau Share) → „Printează” / „Print”.<br>
+    3. În fereastra de printare, alege ca destinație „Salvează ca PDF”.</p>
+    <div class="modal-btns">
+      <button class="btn-primary" onclick="closeModal('pdfHelpModal')">Am înțeles</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="historyModal">
+  <div class="modal-box modal-box-lg">
+    <h3>Istoric partide</h3>
+    <p>Partidele salvate anterior. Apasă pe o partidă pentru detalii.</p>
+    <div id="historyList" class="history-list"></div>
+    <div class="modal-btns">
+      <button class="btn-ghost" onclick="closeModal('historyModal')">Închide</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sharedModal">
+  <div class="modal-box">
+    <h3>🔗 Partidă comună</h3>
+    <div class="join-row" style="margin-bottom:4px;">
+      <input type="text" id="myNameInput" placeholder="Numele tău" onchange="updateMyName()">
+    </div>
+    <p class="modal-note" style="margin-bottom:10px;">Acesta e numele pe care îl văd ceilalți participanți.</p>
+    <p id="sharedStatus">Nu ești conectat la nicio partidă comună.</p>
+    <div id="sharedLinkBox" class="shared-link-box" style="display:none;">
+      <textarea id="sharedLinkText" readonly onclick="this.select()"></textarea>
+      <button class="btn-primary" onclick="copySharedLink()">Copiază link invitație</button>
+      <p id="sharedCopyNote" class="modal-note"></p>
+    </div>
+    <div id="participantsBox" style="display:none;">
+      <p class="modal-note" style="color:rgba(243,239,230,0.6);">Participanți:</p>
+      <div id="participantsList" class="participants-list"></div>
+    </div>
+    <div class="modal-btns" style="justify-content:flex-start;">
+      <button class="btn-primary" onclick="createSharedSession()">Creează partidă comună</button>
+    </div>
+    <p style="margin:6px 0 0;">Sau alătură-te uneia existente cu un cod:</p>
+    <div class="join-row">
+      <input type="text" id="joinCodeInput" placeholder="Cod partidă">
+      <button class="btn-primary" onclick="joinSharedSessionByCode()">Alătură-te</button>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-ghost" onclick="leaveSharedSession()">Părăsește partida comună</button>
+      <button class="btn-ghost" onclick="closeModal('sharedModal')">Închide</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- Firebase (shared sessions) ---
+// This part needs internet to work. Everything else in the app keeps
+// working fully offline exactly as before, whether or not this succeeds.
+const firebaseConfig = {
+  apiKey: "AIzaSyDZynwQNVSDK-s5PXLdWLixfcuYSW9F38M",
+  authDomain: "jurnal-pescuit.firebaseapp.com",
+  databaseURL: "https://jurnal-pescuit-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "jurnal-pescuit",
+  storageBucket: "jurnal-pescuit.firebasestorage.app",
+  messagingSenderId: "151331061880",
+  appId: "1:151331061880:web:1aee7ff0f7f17bde3ded8d"
+};
+let db = null;
+let firebaseReady = false;
+try{
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+  firebaseReady = true;
+}catch(e){ firebaseReady = false; }
+
+// The CDN scripts for Firebase can occasionally fail to load in time on a
+// slow/flaky mobile connection right when the page opens. Rather than being
+// stuck with sync permanently disabled for the rest of the session, retry
+// initialization right before it's actually needed (button press).
+function ensureFirebase(){
+  if(firebaseReady) return true;
+  try{
+    if(typeof firebase === 'undefined') return false;
+    if(!firebase.apps || firebase.apps.length === 0){
+      firebase.initializeApp(firebaseConfig);
+    }
+    db = firebase.database();
+    firebaseReady = true;
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+let currentSharedCode = null;
+let firebaseListenerRef = null;
+let applyingRemoteUpdate = false;
+const SHARED_CODE_STORAGE_KEY = 'jurnalPescuitSharedCode';
+
+function generateShareCode(){
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no confusing chars (0/O, 1/I/L)
+  let code = '';
+  for(let i=0;i<5;i++) code += chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
+
+function pushSharedData(){
+  if(!firebaseReady || !currentSharedCode) return;
+  db.ref('sessions/' + currentSharedCode).update({
+    session: sessionInfo,
+    rods: rods.map(r=>({
+      id:r.id, name:r.name, distance:r.distance, bait:r.bait,
+      catchLog:r.catchLog, missLog:r.missLog,
+      totalSeconds:r.totalSeconds, remaining:r.remaining,
+      running:r.running, endTime:r.endTime
+    })),
+    updatedAt: Date.now()
+  });
+}
+
+// --- Presence: who's currently in the shared session ---
+let myDeviceId = null;
+let myName = null;
+let participantsRef = null;
+let presenceRef = null;
+
+function getMyIdentity(){
+  try{
+    myDeviceId = localStorage.getItem('jurnalPescuitDeviceId');
+    if(!myDeviceId){
+      myDeviceId = generateShareCode() + Date.now();
+      localStorage.setItem('jurnalPescuitDeviceId', myDeviceId);
+    }
+    myName = localStorage.getItem('jurnalPescuitMyName');
+  }catch(e){
+    if(!myDeviceId) myDeviceId = generateShareCode() + Date.now();
+  }
+  if(!myName){
+    myName = 'Pescar ' + myDeviceId.slice(-3);
+    try{ localStorage.setItem('jurnalPescuitMyName', myName); }catch(e){}
+  }
+}
+
+function updateMyName(){
+  const input = document.getElementById('myNameInput');
+  const val = (input.value || '').trim();
+  if(!val) return;
+  myName = val;
+  try{ localStorage.setItem('jurnalPescuitMyName', myName); }catch(e){}
+  if(presenceRef){
+    presenceRef.update({ name: myName });
+  }
+}
+
+function registerPresence(code){
+  if(!firebaseReady) return;
+  getMyIdentity();
+  presenceRef = db.ref('sessions/' + code + '/participants/' + myDeviceId);
+  presenceRef.set({ name: myName, online: true, lastSeen: Date.now() });
+  presenceRef.onDisconnect().update({ online: false, lastSeen: Date.now() });
+
+  participantsRef = db.ref('sessions/' + code + '/participants');
+  participantsRef.on('value', snapshot=>{
+    renderParticipants(snapshot.val());
+  });
+}
+
+function unregisterPresence(){
+  if(presenceRef){
+    presenceRef.update({ online: false, lastSeen: Date.now() });
+    presenceRef.onDisconnect().cancel();
+    presenceRef = null;
+  }
+  if(participantsRef){
+    participantsRef.off();
+    participantsRef = null;
+  }
+  const box = document.getElementById('participantsBox');
+  if(box) box.style.display = 'none';
+}
+
+function renderParticipants(data){
+  const box = document.getElementById('participantsBox');
+  const list = document.getElementById('participantsList');
+  if(!box || !list) return;
+  if(!data){
+    box.style.display = 'none';
+    return;
+  }
+  box.style.display = 'block';
+  const entries = Object.keys(data).map(id=>({ id, ...data[id] }));
+  entries.sort((a,b)=> (b.online?1:0) - (a.online?1:0) || (a.name||'').localeCompare(b.name||''));
+  list.innerHTML = entries.map(p=>{
+    const isYou = p.id === myDeviceId;
+    return `<div class="participant-row">
+      <span class="participant-dot ${p.online ? 'online' : 'offline'}"></span>
+      <span class="participant-name">${escapeHtml(p.name || 'Necunoscut')}</span>
+      ${isYou ? '<span class="participant-you">(tu)</span>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function connectToSharedSession(code, pushInitial){
+  if(!ensureFirebase()){
+    alert('Nu s-a putut conecta la serverul de sincronizare — verifică internetul și apasă din nou butonul.');
+    return;
+  }
+  if(firebaseListenerRef) firebaseListenerRef.off();
+  currentSharedCode = code;
+  try{ localStorage.setItem(SHARED_CODE_STORAGE_KEY, code); }catch(e){}
+
+  const ref = db.ref('sessions/' + code);
+  firebaseListenerRef = ref;
+
+  if(pushInitial){
+    pushSharedData();
+  }
+
+  ref.on('value', snapshot=>{
+    const data = snapshot.val();
+    if(!data) return;
+    applyingRemoteUpdate = true;
+    sessionInfo = data.session || { lake:'', stand:'' };
+    document.getElementById('lakeName').value = sessionInfo.lake || '';
+    document.getElementById('standNumber').value = sessionInfo.stand || '';
+    rods = (data.rods||[]).map(d=>({
+      id: d.id, name: d.name||'Lansetă', distance: d.distance||'', bait: d.bait||'',
+      catchLog: Array.isArray(d.catchLog) ? d.catchLog : [], missLog: Array.isArray(d.missLog) ? d.missLog : [],
+      totalSeconds: d.totalSeconds||300, remaining: d.remaining??d.totalSeconds??300,
+      running: !!(d.running && d.endTime), endTime: (d.running && d.endTime) ? d.endTime : null,
+      ringing:false, alarmIntervalId:null, selected:false
+    }));
+    nextId = Math.max(1, ...rods.map(r=>r.id+1), 1);
+    render();
+    tickAllTimers();
+    applyingRemoteUpdate = false;
+  });
+
+  registerPresence(code);
+  renderSharedStatus();
+}
+
+function createSharedSession(){
+  const code = generateShareCode();
+  connectToSharedSession(code, true);
+}
+
+function joinSharedSessionByCode(){
+  const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+  if(!code) return;
+  if(!confirm('Te alături partidei comune cu codul ' + code + '? Datele locale curente ale lansetelor vor fi înlocuite cu cele din partida comună.')) return;
+  connectToSharedSession(code, false);
+  document.getElementById('joinCodeInput').value = '';
+}
+
+function leaveSharedSession(){
+  if(firebaseListenerRef) firebaseListenerRef.off();
+  firebaseListenerRef = null;
+  unregisterPresence();
+  currentSharedCode = null;
+  try{ localStorage.removeItem(SHARED_CODE_STORAGE_KEY); }catch(e){}
+  renderSharedStatus();
+}
+
+function openSharedModal(){
+  getMyIdentity();
+  document.getElementById('myNameInput').value = myName || '';
+  openModal('sharedModal');
+  renderSharedStatus();
+}
+
+function renderSharedStatus(){
+  const statusEl = document.getElementById('sharedStatus');
+  const linkBox = document.getElementById('sharedLinkBox');
+  if(!statusEl) return;
+  if(currentSharedCode){
+    const link = location.origin + location.pathname + '?join=' + currentSharedCode;
+    statusEl.innerHTML = 'Conectat la partida comună, cod: <b>' + escapeHtml(currentSharedCode) + '</b>. Oricine are codul sau linkul poate vedea și completa datele.';
+    linkBox.style.display = 'flex';
+    document.getElementById('sharedLinkText').value = link;
+    document.getElementById('sharedCopyNote').textContent = '';
+  } else {
+    statusEl.textContent = 'Nu ești conectat la nicio partidă comună.';
+    linkBox.style.display = 'none';
+  }
+}
+
+function copySharedLink(){
+  const ta = document.getElementById('sharedLinkText');
+  ta.select();
+  ta.setSelectionRange(0, 999999);
+  const note = document.getElementById('sharedCopyNote');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(ta.value)
+      .then(()=>{ note.textContent = 'Copiat! Trimite-l celor pe care vrei să-i inviți.'; })
+      .catch(()=>{ note.textContent = 'Nu s-a putut copia automat — selectează textul manual.'; });
+  } else {
+    try{ document.execCommand('copy'); note.textContent = 'Copiat!'; }
+    catch(e){ note.textContent = 'Nu s-a putut copia automat — selectează textul manual.'; }
+  }
+}
+
+let rods = [];
+let nextId = 1;
+let sessionInfo = { lake: '', stand: '' };
+
+function updateSessionInfo(){
+  sessionInfo.lake = document.getElementById('lakeName').value;
+  sessionInfo.stand = document.getElementById('standNumber').value;
+  saveToLocalStorage();
+}
+const RADIUS = 40;
+const CIRC = 2 * Math.PI * RADIUS;
+
+function updateClock(){
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ro-RO', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const timeStr = now.toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  const el = document.getElementById('liveClock');
+  if(el) el.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1) + ' · ' + timeStr;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+function formatCatchTime(iso){
+  const d = new Date(iso);
+  const dateStr = d.toLocaleDateString('ro-RO', { day:'2-digit', month:'2-digit', year:'numeric' });
+  const timeStr = d.toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit' });
+  return dateStr + ' ' + timeStr;
+}
+
+function addRod(preset){
+  const rod = preset || {
+    id: nextId++,
+    name: 'Lansetă ' + (rods.length + 1),
+    distance: '',
+    bait: '',
+    catchLog: [],
+    missLog: [],
+    totalSeconds: 300,
+    remaining: 300,
+    running: false,
+    endTime: null,
+    ringing: false,
+    alarmIntervalId: null,
+    selected: false
+  };
+  if(preset && !preset.id) rod.id = nextId++;
+  if(preset) nextId = Math.max(nextId, rod.id + 1);
+  if(!rod.catchLog) rod.catchLog = [];
+  if(!rod.missLog) rod.missLog = [];
+  if(rod.selected === undefined) rod.selected = false;
+  rods.push(rod);
+  render();
+}
+
+function deleteRod(id){
+  const rod = rods.find(r=>r.id===id);
+  if(rod && rod.alarmIntervalId) clearInterval(rod.alarmIntervalId);
+  rods = rods.filter(r=>r.id!==id);
+  render();
+}
+
+function fmt(sec){
+  sec = Math.max(0, Math.round(sec));
+  const h = Math.floor(sec/3600);
+  const m = Math.floor((sec%3600)/60);
+  const s = sec%60;
+  return [h,m,s].map(v=>String(v).padStart(2,'0')).join(':');
+}
+
+let soundEnabled = true;
+let sharedAudioCtx = null;
+
+function getAudioCtx(){
+  if(!sharedAudioCtx){
+    sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if(sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume();
+  return sharedAudioCtx;
+}
+
+function toggleMute(){
+  soundEnabled = !soundEnabled;
+  const btn = document.getElementById('muteBtn');
+  btn.textContent = soundEnabled ? '🔊 Sunet' : '🔇 Silențios';
+}
+
+function saveAsPDF(){
+  try{
+    window.focus();
+    window.print();
+  }catch(e){
+    openModal('pdfHelpModal');
+  }
+}
+
+function applyGlobalTimer(){
+  const h = parseInt(document.getElementById('globalH').value)||0;
+  const m = parseInt(document.getElementById('globalM').value)||0;
+  const s = parseInt(document.getElementById('globalS').value)||0;
+  const total = h*3600 + m*60 + s;
+  if(total <= 0) return;
+  rods.forEach(rod=>{
+    rod.running = false;
+    rod.endTime = null;
+    stopAlarm(rod);
+    rod.totalSeconds = total;
+    rod.remaining = total;
+  });
+  render();
+}
+
+function toggleRodSelect(id, checked){
+  const rod = rods.find(r=>r.id===id);
+  if(!rod) return;
+  rod.selected = checked;
+}
+
+function switchSelectedRods(){
+  const selected = rods.filter(r=>r.selected);
+  if(selected.length !== 2){
+    alert('Bifează exact 2 lansete pentru a schimba datele între ele.');
+    return;
+  }
+  const [a, b] = selected;
+  // stop timers/alarms on both before swapping, to avoid mismatched intervals
+  [a, b].forEach(rod=>{
+    rod.running = false;
+    rod.endTime = null;
+    stopAlarm(rod);
+  });
+  const fields = ['name','distance','bait','catchLog','missLog','totalSeconds'];
+  fields.forEach(f=>{
+    const tmp = a[f];
+    a[f] = b[f];
+    b[f] = tmp;
+  });
+  a.remaining = a.totalSeconds;
+  b.remaining = b.totalSeconds;
+  a.selected = false;
+  b.selected = false;
+  render();
+}
+
+function playAlarmTone(){
+  if(!soundEnabled) return;
+  try{
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    [0, 0.3].forEach((t,i)=>{
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = i % 2 === 0 ? 880 : 660;
+      g.gain.setValueAtTime(0, now + t);
+      g.gain.linearRampToValueAtTime(0.18, now + t + 0.03);
+      g.gain.linearRampToValueAtTime(0, now + t + 0.28);
+      o.start(now + t);
+      o.stop(now + t + 0.3);
+    });
+  }catch(e){}
+}
+
+function startAlarm(rod){
+  rod.ringing = true;
+  playAlarmTone();
+  if(rod.alarmIntervalId) clearInterval(rod.alarmIntervalId);
+  rod.alarmIntervalId = setInterval(()=>{
+    if(rod.ringing) playAlarmTone();
+  }, 700);
+}
+
+function stopAlarm(rod){
+  rod.ringing = false;
+  if(rod.alarmIntervalId){ clearInterval(rod.alarmIntervalId); rod.alarmIntervalId = null; }
+}
+
+function stopAlarmAndRender(id){
+  const rod = rods.find(r=>r.id===id);
+  if(!rod) return;
+  stopAlarm(rod);
+  render();
+}
+
+function toggleTimer(id){
+  const rod = rods.find(r=>r.id===id);
+  if(!rod) return;
+  if(rod.running){
+    // pause: freeze remaining based on real elapsed time
+    rod.remaining = Math.max(0, Math.ceil((rod.endTime - Date.now())/1000));
+    rod.running = false;
+    rod.endTime = null;
+  } else {
+    stopAlarm(rod);
+    if(rod.remaining <= 0) rod.remaining = rod.totalSeconds;
+    rod.running = true;
+    rod.endTime = Date.now() + rod.remaining*1000;
+  }
+  updateWakeLock();
+  render();
+}
+
+function resetTimer(id){
+  const rod = rods.find(r=>r.id===id);
+  if(!rod) return;
+  rod.running = false;
+  rod.endTime = null;
+  stopAlarm(rod);
+  rod.remaining = rod.totalSeconds;
+  render();
+}
+
+// Single shared ticker drives every running rod's countdown using real
+// timestamps (endTime), so times stay correct even if the browser throttles
+// setInterval while the tab/screen is in the background — the moment the
+// page becomes visible again, remaining time is recalculated from the clock
+// instead of having drifted or stopped.
+let sessionTimer = { totalSeconds: 0, remaining: 0, running: false, endTime: null };
+
+function fmtSessionTime(sec){
+  return fmt(sec);
+}
+
+function renderSessionTimerDisplay(){
+  const el = document.getElementById('sessionTimerDisplay');
+  const btn = document.getElementById('sessionTimerBtn');
+  if(!el || !btn) return;
+  if(sessionTimer.totalSeconds <= 0 && !sessionTimer.running){
+    el.textContent = 'Nesetată';
+  } else {
+    el.textContent = 'Timp rămas din partidă: ' + fmtSessionTime(sessionTimer.remaining);
+  }
+  btn.textContent = sessionTimer.running ? '⏸ Pauză' : '▶ Start';
+}
+
+function toggleSessionTimer(){
+  if(sessionTimer.running){
+    sessionTimer.remaining = Math.max(0, Math.ceil((sessionTimer.endTime - Date.now())/1000));
+    sessionTimer.running = false;
+    sessionTimer.endTime = null;
+  } else {
+    if(sessionTimer.remaining <= 0){
+      const h = parseInt(document.getElementById('sessionH').value)||0;
+      const m = parseInt(document.getElementById('sessionM').value)||0;
+      const s = parseInt(document.getElementById('sessionS').value)||0;
+      const total = h*3600 + m*60 + s;
+      if(total <= 0) return;
+      sessionTimer.totalSeconds = total;
+      sessionTimer.remaining = total;
+    }
+    sessionTimer.running = true;
+    sessionTimer.endTime = Date.now() + sessionTimer.remaining*1000;
+  }
+  updateWakeLock();
+  renderSessionTimerDisplay();
+}
+
+function resetSessionTimerUI(){
+  sessionTimer = { totalSeconds: 0, remaining: 0, running: false, endTime: null };
+  renderSessionTimerDisplay();
+}
+
+function stopAllRodTimers(){
+  rods.forEach(rod=>{
+    if(rod.running){
+      rod.remaining = Math.max(0, Math.ceil((rod.endTime - Date.now())/1000));
+      rod.running = false;
+      rod.endTime = null;
+    }
+  });
+}
+
+function tickAllTimers(){
+  let needFullRender = false;
+  rods.forEach(rod=>{
+    if(!rod.running) return;
+    const rem = Math.max(0, Math.ceil((rod.endTime - Date.now())/1000));
+    if(rem <= 0){
+      rod.remaining = 0;
+      rod.running = false;
+      rod.endTime = null;
+      startAlarm(rod);
+      needFullRender = true;
+    } else if(rem !== rod.remaining){
+      rod.remaining = rem;
+      updateCardVisual(rod);
+    }
+  });
+
+  if(sessionTimer.running){
+    const srem = Math.max(0, Math.ceil((sessionTimer.endTime - Date.now())/1000));
+    if(srem <= 0){
+      sessionTimer.remaining = 0;
+      sessionTimer.running = false;
+      sessionTimer.endTime = null;
+      const hadRunning = rods.some(r=>r.running);
+      stopAllRodTimers();
+      renderSessionTimerDisplay();
+      if(hadRunning) alert('Durata partidei a expirat — toate cronometrele lansetelor au fost oprite.');
+      needFullRender = true;
+    } else if(srem !== sessionTimer.remaining){
+      sessionTimer.remaining = srem;
+      renderSessionTimerDisplay();
+    }
+  }
+
+  if(needFullRender) render();
+}
+setInterval(tickAllTimers, 500);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) tickAllTimers(); });
+window.addEventListener('focus', tickAllTimers);
+
+// Best-effort: keep the screen awake while at least one timer is running,
+// so the countdown keeps ticking accurately instead of the browser
+// suspending JS timers when the screen would otherwise lock.
+let wakeLock = null;
+async function updateWakeLock(){
+  const anyRunning = rods.some(r=>r.running) || sessionTimer.running;
+  try{
+    if(anyRunning && !wakeLock && 'wakeLock' in navigator){
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', ()=>{ wakeLock = null; });
+    } else if(!anyRunning && wakeLock){
+      await wakeLock.release();
+      wakeLock = null;
+    }
+  }catch(e){ /* wake lock not available in this context - ignore */ }
+}
+setInterval(updateWakeLock, 1000);
+document.addEventListener('visibilitychange', ()=>{
+  if(!document.hidden && (rods.some(r=>r.running) || sessionTimer.running)) updateWakeLock();
+});
+
+
+function setDuration(id, h, m, s){
+  const rod = rods.find(r=>r.id===id);
+  if(!rod) return;
+  const total = (parseInt(h)||0)*3600 + (parseInt(m)||0)*60 + (parseInt(s)||0);
+  rod.totalSeconds = total > 0 ? total : 1;
+  if(!rod.running) rod.remaining = rod.totalSeconds;
+  render();
+}
+
+function updateField(id, field, value){
+  const rod = rods.find(r=>r.id===id);
+  if(!rod) return;
+  rod[field] = value;
+}
+
+function addCatch(id){
+  const rod = rods.find(r=>r.id===id);
+  if(!rod) return;
+  rod.catchLog.push({
+    time: new Date().toISOString(),
+    distance: rod.distance,
+    bait: rod.bait
+  });
+  render();
+}
+
+function removeLastCatch(id){
+  const rod = rods.find(r=>r.id===id);
+  if(!rod || rod.catchLog.length===0) return;
+  rod.catchLog.pop();
+  render();
+}
+
+function removeCatchEntry(id, index){
+  const rod = rods.find(r=>r.id===id);
+  if(!rod) return;
+  rod.catchLog.splice(index,1);
+  render();
+}
+
+function addMiss(id){
+  const rod = rods.find(r=>r.id===id);
+  if(!rod) return;
+  rod.missLog.push({
+    time: new Date().toISOString(),
+    distance: rod.distance,
+    bait: rod.bait
+  });
+  render();
+}
+
+function removeLastMiss(id){
+  const rod = rods.find(r=>r.id===id);
+  if(!rod || rod.missLog.length===0) return;
+  rod.missLog.pop();
+  render();
+}
+
+function removeMissEntry(id, index){
+  const rod = rods.find(r=>r.id===id);
+  if(!rod) return;
+  rod.missLog.splice(index,1);
+  render();
+}
+
+function updateCardVisual(rod){
+  const ring = document.querySelector(`.ring-fg[data-id="${rod.id}"]`);
+  const timeLabel = document.querySelector(`.ring-time[data-id="${rod.id}"]`);
+  const card = document.querySelector(`.card[data-id="${rod.id}"]`);
+  if(ring){
+    const frac = rod.totalSeconds > 0 ? rod.remaining / rod.totalSeconds : 0;
+    ring.style.strokeDashoffset = CIRC * (1 - frac);
+  }
+  if(timeLabel) timeLabel.textContent = fmt(rod.remaining);
+  if(card) card.classList.toggle('done', rod.remaining<=0 && !rod.running);
+  const startBtn = document.querySelector(`.btn-start[data-id="${rod.id}"]`);
+  if(startBtn) startBtn.textContent = rod.running ? '⏸ Pauză' : '▶ Start';
+}
+
+function renderStatsOnly(){
+  document.getElementById('statRods').textContent = rods.length;
+  document.getElementById('statCatches').textContent = rods.reduce((a,r)=>a+(r.catchLog?r.catchLog.length:0),0);
+  document.getElementById('statMisses').textContent = rods.reduce((a,r)=>a+(r.missLog?r.missLog.length:0),0);
+}
+
+function render(){
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  if(rods.length===0){
+    board.innerHTML = '<div class="empty">Nicio lansetă adăugată încă. Apasă „+ Adaugă lansetă” pentru a începe.</div>';
+    renderStatsOnly();
+    saveToLocalStorage();
+    if(currentSharedCode && !applyingRemoteUpdate) pushSharedData();
+    return;
+  }
+  rods.forEach(rod=>{
+    const frac = rod.totalSeconds > 0 ? rod.remaining / rod.totalSeconds : 0;
+    const offset = CIRC * (1 - frac);
+    const h = Math.floor(rod.totalSeconds/3600);
+    const m = Math.floor((rod.totalSeconds%3600)/60);
+    const s = rod.totalSeconds%60;
+    const el = document.createElement('div');
+    el.className = 'card' + (rod.remaining<=0 && !rod.running ? ' done' : '') + (rod.ringing ? ' ringing' : '') + (rod.selected ? ' selected' : '');
+    el.setAttribute('data-id', rod.id);
+    el.innerHTML = `
+      <div class="card-top">
+        <input type="checkbox" class="rod-check" ${rod.selected ? 'checked' : ''} onchange="toggleRodSelect(${rod.id}, this.checked)" title="Selectează pentru switch">
+        <input class="rod-name" value="${escapeHtml(rod.name)}" onchange="updateField(${rod.id},'name',this.value)">
+        <button class="del-btn" onclick="deleteRod(${rod.id})" title="Șterge lansetă">✕</button>
+      </div>
+      ${rod.ringing ? `<button class="alarm-stop-btn" onclick="stopAlarmAndRender(${rod.id})">🔔 Oprește alarma</button>` : ''}
+      <div class="timer-wrap">
+        <div class="ring-box">
+          <svg width="96" height="96">
+            <circle class="ring-bg" cx="48" cy="48" r="${RADIUS}"></circle>
+            <circle class="ring-fg" data-id="${rod.id}" cx="48" cy="48" r="${RADIUS}"
+              stroke-dasharray="${CIRC}" stroke-dashoffset="${offset}"></circle>
+          </svg>
+          <div class="ring-time" data-id="${rod.id}">${fmt(rod.remaining)}</div>
+        </div>
+        <div class="timer-controls">
+          <div class="time-inputs">
+            <input type="number" min="0" max="23" value="${h}" onchange="setDuration(${rod.id}, this.value, ${m}, ${s})"><span>h</span>
+            <input type="number" min="0" max="59" value="${m}" onchange="setDuration(${rod.id}, ${h}, this.value, ${s})"><span>m</span>
+            <input type="number" min="0" max="59" value="${s}" onchange="setDuration(${rod.id}, ${h}, ${m}, this.value)"><span>s</span>
+          </div>
+          <div class="timer-btns">
+            <button class="btn-start" data-id="${rod.id}" onclick="toggleTimer(${rod.id})">${rod.running ? '⏸ Pauză' : '▶ Start'}</button>
+            <button class="btn-reset" onclick="resetTimer(${rod.id})">↺ Resetare</button>
+          </div>
+        </div>
+      </div>
+      <div class="field-row">
+        <label>Distanță (m)</label>
+        <input type="number" min="0" step="0.5" value="${escapeHtml(rod.distance)}" placeholder="—" onchange="updateField(${rod.id},'distance',this.value)">
+      </div>
+      <div class="field-row">
+        <label>Momeală</label>
+        <input type="text" value="${escapeHtml(rod.bait)}" placeholder="ex: vierme" onchange="updateField(${rod.id},'bait',this.value)">
+      </div>
+      <div class="field-row">
+        <label>Capturi (${rod.catchLog.length})</label>
+        <div class="counter-controls">
+          <button onclick="removeLastCatch(${rod.id})" title="Șterge ultima captură">−</button>
+          <span class="counter-val">${rod.catchLog.length}</span>
+          <button onclick="addCatch(${rod.id})" title="Înregistrează captură acum">+ Captură</button>
+        </div>
+      </div>
+      <div class="catch-log">
+        ${rod.catchLog.length===0
+          ? '<div class="catch-log-empty">Nicio captură înregistrată încă.</div>'
+          : rod.catchLog.slice().reverse().map((c, ri)=>{
+              const idx = rod.catchLog.length - 1 - ri;
+              return `<div class="catch-entry">
+                <div class="catch-entry-main">
+                  <span class="catch-time">${formatCatchTime(c.time)}</span>
+                  <span class="catch-details">${c.distance ? escapeHtml(c.distance)+'m' : '—'} · ${escapeHtml(c.bait) || 'fără momeală notată'}</span>
+                </div>
+                <button class="catch-del" onclick="removeCatchEntry(${rod.id}, ${idx})" title="Șterge această captură">✕</button>
+              </div>`;
+            }).join('')
+        }
+      </div>
+      <div class="field-row">
+        <label>Ratări (${rod.missLog.length})</label>
+        <div class="counter-controls">
+          <button onclick="removeLastMiss(${rod.id})" title="Șterge ultima ratare">−</button>
+          <span class="counter-val">${rod.missLog.length}</span>
+          <button onclick="addMiss(${rod.id})" title="Înregistrează ratare acum">+ Ratare</button>
+        </div>
+      </div>
+      <div class="catch-log miss-log">
+        ${rod.missLog.length===0
+          ? '<div class="catch-log-empty">Nicio ratare înregistrată încă.</div>'
+          : rod.missLog.slice().reverse().map((c, ri)=>{
+              const idx = rod.missLog.length - 1 - ri;
+              return `<div class="catch-entry miss-entry">
+                <div class="catch-entry-main">
+                  <span class="catch-time">${formatCatchTime(c.time)}</span>
+                  <span class="catch-details">${c.distance ? escapeHtml(c.distance)+'m' : '—'} · ${escapeHtml(c.bait) || 'fără momeală notată'}</span>
+                </div>
+                <button class="catch-del" onclick="removeMissEntry(${rod.id}, ${idx})" title="Șterge această ratare">✕</button>
+              </div>`;
+            }).join('')
+        }
+      </div>
+    `;
+    board.appendChild(el);
+  });
+  renderStatsOnly();
+  saveToLocalStorage();
+  if(currentSharedCode && !applyingRemoteUpdate) pushSharedData();
+}
+
+function escapeHtml(str){
+  return String(str??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+function exportData(){
+  const rodsData = rods.map(r=>({
+    id:r.id, name:r.name, distance:r.distance, bait:r.bait, catchLog:r.catchLog, missLog:r.missLog,
+    totalSeconds:r.totalSeconds, remaining:r.running?r.remaining:r.totalSeconds
+  }));
+  const data = { session: sessionInfo, rods: rodsData };
+  const jsonStr = JSON.stringify(data,null,2);
+
+  // Best-effort silent download attempt (works in a normal browser tab / opened file)
+  let downloaded = false;
+  try{
+    const blob = new Blob([jsonStr], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'jurnal-pescuit-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    downloaded = true;
+  }catch(e){ downloaded = false; }
+
+  // Always show the modal too, as a guaranteed fallback
+  document.getElementById('exportText').value = jsonStr;
+  document.getElementById('copyNote').textContent = downloaded ? 'S-a încercat și descărcarea automată — verifică folderul Descărcări.' : '';
+  openModal('exportModal');
+}
+
+function copyExportText(){
+  const ta = document.getElementById('exportText');
+  ta.select();
+  ta.setSelectionRange(0, 999999);
+  let ok = false;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(ta.value).then(()=>{
+      document.getElementById('copyNote').textContent = 'Copiat! Lipește-l acum într-o notiță sau fișier text.';
+    }).catch(()=>{
+      try{ ok = document.execCommand('copy'); }catch(e){}
+      document.getElementById('copyNote').textContent = ok ? 'Copiat!' : 'Nu s-a putut copia automat — selectează textul manual și copiază-l.';
+    });
+  } else {
+    try{ ok = document.execCommand('copy'); }catch(e){}
+    document.getElementById('copyNote').textContent = ok ? 'Copiat!' : 'Nu s-a putut copia automat — selectează textul manual și copiază-l.';
+  }
+}
+
+function importFromText(){
+  const raw = document.getElementById('importText').value.trim();
+  if(!raw) return;
+  applyImportedJson(raw);
+}
+
+function importData(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=> applyImportedJson(e.target.result);
+  reader.readAsText(file);
+  evt.target.value = '';
+}
+
+function loadParsedState(parsed){
+  const data = Array.isArray(parsed) ? parsed : (parsed.rods || []);
+  const session = Array.isArray(parsed) ? null : parsed.session;
+  rods = data.map(d=>({
+    id: d.id, name: d.name||'Lansetă', distance: d.distance||'', bait: d.bait||'',
+    catchLog: Array.isArray(d.catchLog) ? d.catchLog : [], missLog: Array.isArray(d.missLog) ? d.missLog : [], totalSeconds: d.totalSeconds||300, remaining: d.remaining??d.totalSeconds??300,
+    running: !!(d.running && d.endTime), endTime: (d.running && d.endTime) ? d.endTime : null,
+    ringing:false, alarmIntervalId:null, selected:false
+  }));
+  nextId = Math.max(1, ...rods.map(r=>r.id+1), 1);
+  if(session){
+    sessionInfo = { lake: session.lake || '', stand: session.stand || '' };
+    document.getElementById('lakeName').value = sessionInfo.lake;
+    document.getElementById('standNumber').value = sessionInfo.stand;
+  }
+  const st = Array.isArray(parsed) ? null : parsed.sessionTimer;
+  if(st && st.running && st.endTime){
+    sessionTimer = { totalSeconds: st.totalSeconds||0, remaining: st.remaining||0, running: true, endTime: st.endTime };
+  } else if(st){
+    sessionTimer = { totalSeconds: st.totalSeconds||0, remaining: st.remaining||0, running: false, endTime: null };
+  }
+  renderSessionTimerDisplay();
+  // recompute remaining immediately from the real clock for any timer that
+  // was running, so it either shows the correct countdown or fires the
+  // alarm right away if it already finished while the app was closed
+  tickAllTimers();
+  updateWakeLock();
+}
+
+function applyImportedJson(raw){
+  try{
+    const parsed = JSON.parse(raw);
+    loadParsedState(parsed);
+    render();
+    closeModal('importModal');
+    document.getElementById('importText').value = '';
+  }catch(err){
+    alert('Textul nu a putut fi citit. Verifică dacă este un JSON valid, exportat din această aplicație.');
+  }
+}
+
+const LOCAL_STORAGE_KEY = 'jurnalPescuitData';
+const HISTORY_STORAGE_KEY = 'jurnalPescuitHistory';
+let sessionHistory = [];
+
+function loadHistoryFromStorage(){
+  try{
+    const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+    sessionHistory = raw ? JSON.parse(raw) : [];
+  }catch(e){ sessionHistory = []; }
+}
+
+function saveHistoryToStorage(){
+  try{
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(sessionHistory));
+  }catch(e){ /* storage unavailable - ignore */ }
+}
+
+function startPartida(){
+  const confirmReset = confirm('Sigur vrei să pornești o partidă nouă? Se șterg distanțele, momelile, capturile și ratările, iar numele lansetelor revin la valorile implicite.');
+  if(!confirmReset) return;
+
+  rods.forEach((r, i)=>{
+    r.name = 'Lansetă ' + (i+1);
+    r.distance = '';
+    r.bait = '';
+    r.catchLog = [];
+    r.missLog = [];
+    r.running = false;
+    r.endTime = null;
+    stopAlarm(r);
+    r.totalSeconds = 300;
+    r.remaining = 300;
+    r.selected = false;
+  });
+
+  sessionInfo = { lake:'', stand:'' };
+  document.getElementById('lakeName').value = '';
+  document.getElementById('standNumber').value = '';
+
+  resetSessionTimerUI();
+
+  render();
+}
+
+function finalizePartida(){
+  const snapshot = {
+    id: Date.now(),
+    savedAt: new Date().toISOString(),
+    lake: sessionInfo.lake,
+    stand: sessionInfo.stand,
+    rods: rods.map(r=>({
+      name: r.name, distance: r.distance, bait: r.bait,
+      catchLog: r.catchLog, missLog: r.missLog
+    }))
+  };
+  sessionHistory.unshift(snapshot);
+  saveHistoryToStorage();
+
+  resetSessionTimerUI();
+
+  rods.forEach(r=>{
+    r.distance = '';
+    r.catchLog = [];
+    r.missLog = [];
+  });
+
+  render();
+  alert('Partida a fost salvată în istoric. Cronometrul general s-a oprit, iar distanțele, capturile și ratările au fost resetate.');
+}
+
+function deleteHistorySession(id){
+  sessionHistory = sessionHistory.filter(s=>s.id!==id);
+  saveHistoryToStorage();
+  renderHistoryList();
+}
+
+function printHistorySession(id){
+  const s = sessionHistory.find(x=>x.id===id);
+  if(!s) return;
+  const totalCatches = s.rods.reduce((a,r)=>a+(r.catchLog?r.catchLog.length:0),0);
+  const totalMisses = s.rods.reduce((a,r)=>a+(r.missLog?r.missLog.length:0),0);
+  const place = [s.lake, s.stand ? ('stand ' + s.stand) : ''].filter(Boolean).join(' · ');
+
+  const rodsHtml = s.rods.map(r=>{
+    const catches = (r.catchLog||[]).length
+      ? r.catchLog.map(c=>`<div class="ps-entry">${formatCatchTime(c.time)} — ${c.distance ? escapeHtml(c.distance)+'m' : '—'} · ${escapeHtml(c.bait) || 'fără momeală notată'}</div>`).join('')
+      : '<div class="ps-entry-empty">Nicio captură</div>';
+    const misses = (r.missLog||[]).length
+      ? r.missLog.map(c=>`<div class="ps-entry">${formatCatchTime(c.time)} — ${c.distance ? escapeHtml(c.distance)+'m' : '—'} · ${escapeHtml(c.bait) || 'fără momeală notată'}</div>`).join('')
+      : '<div class="ps-entry-empty">Nicio ratare</div>';
+    return `<div class="ps-rod">
+      <h3>${escapeHtml(r.name)}</h3>
+      <div class="ps-rod-meta">Distanță: ${r.distance ? escapeHtml(r.distance)+'m' : '—'} · Momeală: ${escapeHtml(r.bait) || '—'}</div>
+      <div class="ps-section-title">Capturi (${(r.catchLog||[]).length})</div>
+      ${catches}
+      <div class="ps-section-title">Ratări (${(r.missLog||[]).length})</div>
+      ${misses}
+    </div>`;
+  }).join('');
+
+  document.getElementById('printSessionContent').innerHTML = `
+    <h1>🎣 ${escapeHtml(place) || 'Partidă de pescuit'}</h1>
+    <p class="ps-date">${formatCatchTime(s.savedAt)}</p>
+    <p class="ps-summary">Total capturi: ${totalCatches} · Total ratări: ${totalMisses}</p>
+    ${rodsHtml}
+  `;
+
+  document.body.classList.add('printing-history');
+  try{
+    window.focus();
+    window.print();
+  }catch(e){
+    openModal('pdfHelpModal');
+  }
+}
+
+window.addEventListener('afterprint', ()=>{
+  document.body.classList.remove('printing-history');
+});
+
+function toggleHistoryDetail(id){
+  const el = document.getElementById('hist-detail-'+id);
+  if(el) el.classList.toggle('open');
+}
+
+function openHistoryModal(){
+  renderHistoryList();
+  openModal('historyModal');
+}
+
+function renderHistoryList(){
+  const container = document.getElementById('historyList');
+  if(sessionHistory.length===0){
+    container.innerHTML = '<div class="history-empty">Nicio partidă salvată încă. Apasă „💾 Salvează partida” după o ieșire la pescuit pentru a o adăuga aici.</div>';
+    return;
+  }
+  container.innerHTML = sessionHistory.map(s=>{
+    const totalCatches = s.rods.reduce((a,r)=>a+(r.catchLog?r.catchLog.length:0),0);
+    const totalMisses = s.rods.reduce((a,r)=>a+(r.missLog?r.missLog.length:0),0);
+    const dateStr = formatCatchTime(s.savedAt);
+    const place = [s.lake, s.stand ? ('stand ' + s.stand) : ''].filter(Boolean).join(' · ');
+    const rodsHtml = s.rods.map(r=>{
+      const rc = r.catchLog ? r.catchLog.length : 0;
+      const rm = r.missLog ? r.missLog.length : 0;
+      return `<div class="history-rod">
+        <span class="history-rod-name">${escapeHtml(r.name)}</span>
+        <span class="history-rod-meta"> — ${r.distance ? escapeHtml(r.distance)+'m' : 'fără distanță'} · ${escapeHtml(r.bait) || 'fără momeală'} · ${rc} capturi, ${rm} ratări</span>
+      </div>`;
+    }).join('');
+    return `<div class="history-session">
+      <div class="history-session-head" onclick="toggleHistoryDetail(${s.id})">
+        <div>
+          <div class="history-session-title">${escapeHtml(place) || 'Partidă fără lac notat'}</div>
+          <div class="history-session-sub">${dateStr}</div>
+        </div>
+        <div class="history-session-stats">
+          ${totalCatches} capturi<br>${totalMisses} ratări
+          <button class="history-pdf" onclick="event.stopPropagation(); printHistorySession(${s.id})" title="Salvează această partidă ca PDF">🖨️ PDF</button>
+          <button class="history-del" onclick="event.stopPropagation(); deleteHistorySession(${s.id})" title="Șterge din istoric">✕</button>
+        </div>
+      </div>
+      <div class="history-detail" id="hist-detail-${s.id}">${rodsHtml}</div>
+    </div>`;
+  }).join('');
+}
+
+function saveToLocalStorage(){
+  try{
+    const data = {
+      session: sessionInfo,
+      sessionTimer: sessionTimer,
+      rods: rods.map(r=>({
+        id:r.id, name:r.name, distance:r.distance, bait:r.bait, catchLog:r.catchLog, missLog:r.missLog,
+        totalSeconds:r.totalSeconds, remaining:r.remaining, running:r.running, endTime:r.endTime
+      }))
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+  }catch(e){ /* storage unavailable (e.g. in-chat preview) - fails silently, no data loss for the user since nothing was saved before either */ }
+}
+
+function loadFromLocalStorage(){
+  try{
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if(!raw) return false;
+    const parsed = JSON.parse(raw);
+    if(!parsed.rods || parsed.rods.length===0) return false;
+    loadParsedState(parsed);
+    return true;
+  }catch(e){ return false; }
+}
+
+loadHistoryFromStorage();
+
+let startedShared = false;
+const urlParams = new URLSearchParams(location.search);
+const joinCode = urlParams.get('join');
+
+if(joinCode){
+  const codeUpper = joinCode.toUpperCase();
+  history.replaceState({}, '', location.pathname);
+  if(confirm('Vrei să te alături partidei comune cu codul ' + codeUpper + '? Datele locale curente ale lansetelor vor fi înlocuite cu cele din partida comună.')){
+    connectToSharedSession(codeUpper, false);
+    startedShared = true;
+  }
+} else {
+  let savedCode = null;
+  try{ savedCode = localStorage.getItem(SHARED_CODE_STORAGE_KEY); }catch(e){}
+  if(savedCode){
+    connectToSharedSession(savedCode, false);
+    startedShared = true;
+  }
+}
+
+if(!startedShared){
+  if(!loadFromLocalStorage()){
+    // No saved data found - start with example rods
+    addRod({name:'Lansetă 1', distance:'', bait:'', catchLog:[], missLog:[], totalSeconds:300, remaining:300});
+    addRod({name:'Lansetă 2', distance:'', bait:'', catchLog:[], missLog:[], totalSeconds:300, remaining:300});
+    addRod({name:'Lansetă 3', distance:'', bait:'', catchLog:[], missLog:[], totalSeconds:300, remaining:300});
+    addRod({name:'Lansetă 4', distance:'', bait:'', catchLog:[], missLog:[], totalSeconds:300, remaining:300});
+  } else {
+    render();
+  }
+}
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./service-worker.js').catch(()=>{ /* not available in this context (e.g. file://) - ignore */ });
+  });
+}
+</script>
+
+</body>
+</html>
